@@ -7,45 +7,60 @@
 ; Event procedures needs to be put in another source file.
 ;
 
-Global Window_main
+Global Form3
 
-Global Button_Host, Button_ipban, Button_uban, Button_mute, Button_unmute, Button_disconnect, Button_kick, Button_settings, Button_areas, Button_chars, Button_music, Button_reload, String_port, ListView_users, Button_ooc, Checkbox_public, Button_reconnect
+Global Button_Host, Button_ipban, Button_uban, Button_mute, Button_unmute, Button_disconnect, Button_kick, Button_settings, Button_areas, Button_init, Button_music, button_reload, String_port, ListBox_users, Button_ooc, Checkbox_public, Button_reconnect, edit_ooc, Memo2, Button18, Button6, Button_items, Button14, Button15, Button16, Memo_ooc
 
 Enumeration FormGadget
-  #ListView_2
+  #listbox_event
 EndEnumeration
 
 
-Procedure OpenWindow_main(x = 0, y = 0, width = 470, height = 390)
-  Window_main = OpenWindow(#PB_Any, x, y, width, height, "Visual Novel Online BETASERVER ("+version$+")", #PB_Window_SystemMenu)
-  CreateStatusBar(0, WindowID(Window_main))
+Procedure OpenForm3(x = 0, y = 0, width = 704, height = 382)
+  Form3 = OpenWindow(#PB_Any, x, y, width, height, "Visual Novel Online IRC Server", #PB_Window_SystemMenu | #PB_Window_MinimizeGadget)
+  CreateStatusBar(0, WindowID(Form3))
   AddStatusBarField(150)
   StatusBarText(0, 0, "AS Connection: OFFLINE")
   AddStatusBarField(150)
   StatusBarText(0, 1, "Server Status: OFFLINE")
   AddStatusBarField(#PB_Ignore)
   StatusBarText(0, 2, "Public: FALSE")
-  Button_Host = ButtonGadget(#PB_Any, 409, 71, 57, 23, "Host")
-  Button_ipban = ButtonGadget(#PB_Any, 409, 195, 57, 23, "IPBan")
-  Button_uban = ButtonGadget(#PB_Any, 409, 226, 56, 23, "Userban")
-  Button_mute = ButtonGadget(#PB_Any, 409, 133, 56, 23, "Mute")
-  Button_unmute = ButtonGadget(#PB_Any, 409, 164, 56, 23, "Unmute")
-  Button_disconnect = ButtonGadget(#PB_Any, 409, 257, 56, 23, "Discon.")
-  Button_kick = ButtonGadget(#PB_Any, 409, 102, 56, 23, "Kick")
-  Button_settings = ButtonGadget(#PB_Any, 10, 10, 55, 23, "settings")
-  Button_areas = ButtonGadget(#PB_Any, 178, 10, 55, 23, "areas")
-  Button_chars = ButtonGadget(#PB_Any, 66, 10, 55, 23, "init")
-  Button_music = ButtonGadget(#PB_Any, 122, 10, 55, 23, "music")
-  Button_reload = ButtonGadget(#PB_Any, 345, 331, 56, 23, "Reload")
-  String_port = StringGadget(#PB_Any, 637, 385, 66, 21, "6541")
-  ListView_users = ListViewGadget(#PB_Any, 9, 40, 393, 284)
-  Button_ooc = ButtonGadget(#PB_Any, 137, 331, 56, 23, "OOC[!]")
-  Checkbox_public = CheckBoxGadget(#PB_Any, 703, 395, 63, 17, "Public")
-  ListViewGadget(#ListView_2, 583, 103, 257, 271)
+  Button_Host = ButtonGadget(#PB_Any, 407, 69, 58, 25, "Host")
+  Button_ipban = ButtonGadget(#PB_Any, 407, 193, 59, 25, "IPBan")
+  Button_uban = ButtonGadget(#PB_Any, 407, 224, 58, 25, "UserBan")
+  Button_mute = ButtonGadget(#PB_Any, 407, 131, 58, 25, "Mute")
+  Button_unmute = ButtonGadget(#PB_Any, 407, 162, 58, 25, "Unmute")
+  Button_disconnect = ButtonGadget(#PB_Any, 407, 255, 58, 25, "Discon.")
+  Button_kick = ButtonGadget(#PB_Any, 407, 100, 58, 25, "Kick")
+  Button_settings = ButtonGadget(#PB_Any, 8, 8, 57, 25, "settings")
+  Button_areas = ButtonGadget(#PB_Any, 176, 8, 57, 25, "areas")
+  Button_init = ButtonGadget(#PB_Any, 64, 8, 57, 25, "init")
+  Button_music = ButtonGadget(#PB_Any, 120, 8, 57, 25, "music")
+  button_reload = ButtonGadget(#PB_Any, 407, 286, 58, 25, "Reload")
+  HideGadget(button_reload, 1)
+  String_port = StringGadget(#PB_Any, 407, 40, 58, 25, "6541")
+  HideGadget(String_port, 1)
+  ListBox_users = ListViewGadget(#PB_Any, 8, 39, 393, 284)
+  Button_ooc = ButtonGadget(#PB_Any, 135, 329, 58, 25, "OOC")
+  Checkbox_public = CheckBoxGadget(#PB_Any, 407, 15, 58, 25, "Public")
+  HideGadget(Checkbox_public, 1)
+  ListViewGadget(#listbox_event, 470, 8, 225, 346)
   Button_reconnect = ButtonGadget(#PB_Any, 682, 436, 62, 25, "RECONN.")
+  edit_ooc = StringGadget(#PB_Any, 8, 302, 393, 21, "")
+  HideGadget(edit_ooc, 1)
+  Memo2 = EditorGadget(#PB_Any, 8, 39, 393, 284)
+  HideGadget(Memo2, 1)
+  Button18 = ButtonGadget(#PB_Any, 360, 329, 41, 25, "Save")
+  Button6 = ButtonGadget(#PB_Any, 8, 329, 57, 25, "Server")
+  Button_items = ButtonGadget(#PB_Any, 232, 8, 57, 25, "items")
+  Button14 = ButtonGadget(#PB_Any, 288, 8, 57, 25, "ban")
+  Button15 = ButtonGadget(#PB_Any, 344, 8, 57, 25, "ipban")
+  Button16 = ButtonGadget(#PB_Any, 71, 329, 58, 25, "Main")
+  Memo_ooc = EditorGadget(#PB_Any, 8, 39, 393, 265)
+  HideGadget(Memo_ooc, 1)
 EndProcedure
 
-Procedure Window_main_Events(event)
+Procedure Form3_Events(event)
   Select event
     Case #PB_Event_CloseWindow
       ProcedureReturn #False

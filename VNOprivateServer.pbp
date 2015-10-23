@@ -7,34 +7,34 @@
   <section name="data">
     <explorer view="..\server_private\" pattern="8"/>
     <log show="1"/>
-    <lastopen date="2015-09-28 16:19" user="Sven" host="SPC"/>
+    <lastopen date="2015-10-23 19:13" user="Sven" host="SPC"/>
   </section>
   <section name="files">
     <file name="..\server_private\server_shared.pb">
       <config load="0" scan="1" panel="1" warn="1" lastopen="1" panelstate="++"/>
-      <fingerprint md5="9221528e063f4b6c143e652cfc29ca55"/>
+      <fingerprint md5="46ecc560cc69941816a7dd29079ca98b"/>
     </file>
     <file name="Common.pbf">
       <config load="0" scan="1" panel="1" warn="1" lastopen="1" panelstate="+"/>
-      <fingerprint md5="2e561bbe7b6f42237b49e66e127e47a3"/>
+      <fingerprint md5="eacd820669c15a119f01eb7a2f147c82"/>
     </file>
     <file name="main.pb">
       <config load="0" scan="1" panel="1" warn="1" lastopen="1" panelstate="+"/>
-      <fingerprint md5="def86c5000608182cfa4588ebd75dd30"/>
+      <fingerprint md5="3c90618be126152495fedafa37967781"/>
     </file>
   </section>
   <section name="targets">
     <target name="serverV" enabled="1" default="1">
       <inputfile value="main.pb"/>
-      <outputfile value="build/VNO_SERVER.exe"/>
+      <outputfile value="build/VNO_S_FINAL_1_0.exe"/>
       <compiler version="PureBasic 5.31 (Windows - x86)"/>
       <commandline value="-auto"/>
       <executable value="build\VNO_SERVER.exe"/>
       <options thread="1" xpskin="1" debug="1"/>
       <icon enable="1">..\mainicon.ico</icon>
       <format exe="default" cpu="2"/>
-      <compilecount enable="1" value="833"/>
-      <buildcount enable="1" value="119"/>
+      <compilecount enable="1" value="859"/>
+      <buildcount enable="1" value="121"/>
       <versioninfo enable="1">
         <field0 value="1,0,0,0"/>
         <field1 value="1,0,0,0"/>
@@ -55,14 +55,14 @@
     </target>
     <target name="serverVco" enabled="1" default="0">
       <inputfile value="main.pb"/>
-      <outputfile value="build/VNO_SERVER_CO.exe"/>
+      <outputfile value="build/VNO_C_FINAL_1_0.exe"/>
       <compiler version="PureBasic 5.31 (Windows - x86)"/>
       <executable value="build\VNO_SERVER_CO.exe"/>
       <options thread="1" debug="1"/>
       <icon enable="0">owner.ico</icon>
       <format exe="console" cpu="0"/>
-      <compilecount enable="1" value="819"/>
-      <buildcount enable="1" value="119"/>
+      <compilecount enable="1" value="821"/>
+      <buildcount enable="1" value="121"/>
       <versioninfo enable="1">
         <field0 value="1,0,0,0"/>
         <field1 value="1,0,0,0"/>
