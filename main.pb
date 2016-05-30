@@ -17,7 +17,7 @@ Global version$="1.3"
 Global view$
 Global Logging.b=0
 Global public.b=0
-Global CheckEm.b=1
+Global CheckEm.b=0
 Global LogFile$="log.txt"
 Global modpass$=""
 Global adminpass$=""
@@ -539,7 +539,7 @@ ProcedureDLL MasterAdvert(port)
   PreferenceGroup("AS")
   master$=ReadPreferenceString("1","54.93.210.149")
   PreferenceGroup("login")
-  CheckEm=ReadPreferenceInteger("Check",1)
+  CheckEm=ReadPreferenceInteger("Check",0)
   mscpass$=UCase(MD5Fingerprint(@mspass$,StringByteLength(mspass$)))
   msport=6543
   ClosePreferences() 
@@ -1998,7 +1998,7 @@ CompilerIf #PB_Compiler_Debugger
     
   CompilerEndIf
 ; IDE Options = PureBasic 5.31 (Windows - x86)
-; CursorPosition = 1479
-; FirstLine = 1464
+; CursorPosition = 19
+; FirstLine = 16
 ; Folding = ---
 ; EnableXP
