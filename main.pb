@@ -4,14 +4,6 @@ CompilerIf #PB_Compiler_OS <> #PB_OS_Windows
   #MB_ICONERROR=0
 CompilerEndIf
 
-Structure ItemData
-  name.s
-  price.w
-  filename.s
-  desc.s
-EndStructure
-Global Dim Items.ItemData(100)
-
 #CROSS=0
 Global version$="1.3"
 Global view$
@@ -80,7 +72,7 @@ CompilerIf #CONSOLE=0
 CompilerEndIf
 
 IncludeFile "../server_private/server_shared.pb"
-
+Global Dim Items.ItemData(100)
 ;- Define Functions
 ; yes after the network init and include code
 ; many of these depend on that
@@ -121,7 +113,7 @@ Procedure LoadServer(reload)
   PreferenceGroup("net")
   modpass$=ReadPreferenceString("modpass","")   
   port=ReadPreferenceInteger("port",7777)
-  
+  Debug port
   public=ReadPreferenceInteger("public",0)
   CompilerIf #CONSOLE=0
     SetGadgetText(String_Port,Str(port))
@@ -397,23 +389,43 @@ Procedure SendTarget(user$,message$,*sender.Client)
   
   If FindMapElement(Clients(),user$)
     
-    If Clients()\websocket
+    If Clients()\type=#WEBSOCKET
       CompilerIf #WEB
         Websocket_SendTextFrame(Clients()\ClientID,message$)
       CompilerEndIf
     Else
-      SendNetworkString(Clients()\ClientID,message$)  
+      Debug message$
+      sresult=SendNetworkString(Clients()\ClientID,message$)  
+      If sresult=-1
+        WriteLog("CLIENT DIED DIRECTLY",Clients())
+        If areas(Clients()\area)\lock=Clients()\ClientID
+          areas(Clients()\area)\lock=0
+          areas(Clients()\area)\mlock=0
+        EndIf
+        DeleteMapElement(Clients(),Str(Clients()\ClientID))
+        rf=1
+      EndIf
     EndIf
   Else
     ResetMap(Clients())
     While NextMapElement(Clients())
-      If user$=Str(Clients()\CID) Or user$=Clients()\IP Or (everybody And (*sender\area=Clients()\area Or *sender\area=-1)) And Clients()\master=*sender\master
-        If Clients()\websocket
+      If user$=Str(Clients()\CID) Or user$=Clients()\HD Or user$=Clients()\IP Or user$=Clients()\username Or user$="Area"+Str(Clients()\area) Or (everybody And (*sender\area=Clients()\area Or *sender\area=-1)) And Clients()\type=*sender\type
+        If Clients()\type=#WEBSOCKET
           CompilerIf #WEB
             Websocket_SendTextFrame(Clients()\ClientID,message$)
           CompilerEndIf
         Else
-          SendNetworkString(Clients()\ClientID,message$)  
+          Debug message$
+          sresult=SendNetworkString(Clients()\ClientID,message$)
+          If sresult=-1
+            WriteLog("CLIENT DIED",Clients())
+            If areas(Clients()\area)\lock=Clients()\ClientID
+              areas(Clients()\area)\lock=0
+              areas(Clients()\area)\mlock=0
+            EndIf
+            DeleteMapElement(Clients(),Str(Clients()\ClientID))
+            rf=1
+          EndIf
         EndIf
       EndIf
     Wend   
@@ -1245,13 +1257,13 @@ Procedure CheckInternetCode(*usagePointer.Client)
       EndSelect
       
     Case "CO"
-      *usagePointer\master=1
+      *usagePointer\type=#MASTER
       SendTarget(Str(ClientID),"VNAL#"+StringField(rawreceive$,2,"#")+"#%",Server)
       SendTarget(Str(ClientID),"SDA#1#"+msname$+"#"+msip$+"#"+Str(port)+"#"+desc$+"#http://stoned.ddns.net/#%",Server)
       SendTarget(Str(ClientID),"SDP#0#"+msname$+"#"+msip$+"#"+Str(port)+"#"+desc$+"#http://stoned.ddns.net/#%",Server)
       
     Case "VER"
-      *usagePointer\master=1
+      *usagePointer\type=#MASTER
       SendTarget(Str(ClientID),"VEROK#%",Server)
       
     Case "VIP"
@@ -1307,83 +1319,11 @@ CompilerIf #CONSOLE=0
     EndIf
   EndProcedure
   
-  ;     
-  ;     Procedure ConfigWindow(var)
-  ;       Open_Window_1()
-  ;       AddGadgetItem(#Combo_3,0,"None")
-  ;       AddGadgetItem(#Combo_3,1,"Green")
-  ;       AddGadgetItem(#Combo_3,2,"Red")
-  ;       AddGadgetItem(#Combo_3,3,"Orange")
-  ;       AddGadgetItem(#Combo_3,4,"Blue")
-  ;       SetGadgetText(String_OP,modpass$)
-  ;       SetGadgetText(String_AD,adminpass$)
-  ;       SetGadgetState(Checkbox_4,Logging)
-  ;       SetGadgetState(Checkbox_BlockIni,blockini)
-  ;       SetGadgetState(#Combo_3,modcol)
-  ;       AddGadgetItem(#Combo_4,0,"NONE")
-  ;       For loadevi=1 To EviNumber
-  ;         AddGadgetItem(#Combo_4,loadevi,Evidences(loadevi)\name)
-  ;       Next
-  ;       SetGadgetState(#Combo_4,MOTDevi)
-  ;       Repeat ; Start of the event loop
-  ;         Event = WaitWindowEvent() ; This line waits until an event is received from Windows
-  ;         WindowID = EventWindow() ; The Window where the event is generated, can be used in the gadget procedures
-  ;         GadgetID = EventGadget() ; Is it a gadget event?
-  ;         EventType = EventType() ; The event type
-  ;         If Event = #PB_Event_Gadget
-  ;           If GadgetID = String_OP
-  ;             modpass$ = GetGadgetText(String_OP)
-  ;             CompilerIf #SPAM
-  ;               If modpass$="spam"
-  ;                 CreateThread(@SpamWindow(),0)
-  ;                 modpass$=""
-  ;                 SetGadgetText(String_OP,"")
-  ;               EndIf
-  ;             CompilerEndIf
-  ;           ElseIf GadgetID = String_AD
-  ;             adminpass$ = GetGadgetText(String_AD)
-  ;           ElseIf GadgetID = Checkbox_4
-  ;             If GetGadgetState(Checkbox_4)
-  ;               If OpenFile(1,LogFile$,#PB_File_SharedRead | #PB_File_NoBuffering)
-  ;                 Logging = 1
-  ;                 FileSeek(1,Lof(1))
-  ;                 WriteLog("LOGGING STARTED",Server)
-  ;               Else
-  ;                 SetGadgetState(Checkbox_4,0)
-  ;               EndIf
-  ;             Else
-  ;               CloseFile(1)
-  ;               Logging = 0          
-  ;             EndIf
-  ;           ElseIf GadgetID = Button_5        
-  ;             Event = #PB_Event_CloseWindow
-  ;           ElseIf GadgetID = #Combo_3       
-  ;             modcol=GetGadgetState(#Combo_3)
-  ;           ElseIf GadgetID = #Combo_4      
-  ;             motdevi=GetGadgetState(#Combo_4)
-  ;           ElseIf GadgetID = Checkbox_BlockIni  
-  ;             blockini=GetGadgetState(Checkbox_BlockIni)
-  ;           ElseIf GadgetID = Button_9
-  ;             LogFile$=SaveFileRequester("Choose log file",LogFile$,"Log files (*.log)|*.log",0)
-  ;           EndIf
-  ;         EndIf
-  ;       Until Event = #PB_Event_CloseWindow ; End of the event loop
-  ;       OpenPreferences("poker.ini")
-  ;       PreferenceGroup("cfg")
-  ;       WritePreferenceString("LogFile",LogFile$)
-  ;       WritePreferenceInteger("Logging",GetGadgetState(Checkbox_4))
-  ;       WritePreferenceString("oppass",GetGadgetText(String_OP))
-  ;       WritePreferenceString("adminpass",GetGadgetText(String_AD))
-  ;       WritePreferenceInteger("ModCol",GetGadgetState(#Combo_3))
-  ;       WritePreferenceInteger("motdevi",GetGadgetState(#Combo_4))
-  ;       WritePreferenceInteger("BlockIni",GetGadgetState(Checkbox_BlockIni))
-  ;       ClosePreferences()
-  ;     EndProcedure 
-  ;     
+  
   Procedure Splash(ponly)
     OpenForm3()
     AddKeyboardShortcut(Form3, #PB_Shortcut_Return, 1)
-    If ReceiveHTTPFile("http://stoned.ddns.net/serverv.txt","serverv.txt")
+    If ReceiveHTTPFile("https://raw.githubusercontent.com/stonedDiscord/serverV/master/serverv.txt","serverv.txt")
       OpenPreferences("serverv.txt")
       PreferenceGroup("Version")
       newbuild=ReadPreferenceInteger("Build",#PB_Editor_BuildCount)
@@ -1480,7 +1420,7 @@ Procedure Network(var)
             Areas(1)\players+1
             Clients()\ignore=0
             Clients()\ooct=0
-            Clients()\websocket=0
+            Clients()\type=0
             Clients()\username="$UNOWN"            
             UnlockMutex(ListMutex)
             
@@ -1972,23 +1912,7 @@ CompilerIf #PB_Compiler_Debugger
           Server\last = "CT#$ADMIN#"+adch$+"#%"
           CheckInternetCode(Server)
         EndIf
-        
-      ElseIf Event = #PB_Event_SizeWindow
-        
-        ;               ResizeGadget(#Frame3D_0,0,0,WindowWidth(0)/2.517,WindowHeight(0))
-        ;               ResizeGadget(Listbox_users,70,40,WindowWidth(0)/2.517-70,WindowHeight(0)-40)
-        ;               ResizeGadget(Button_2,WindowWidth(0)/6.08,15,WindowWidth(0)/8.111,22)
-        ;               ResizeGadget(String_5,WindowWidth(0)/3.476,15,WindowWidth(0)/10.42,22)
-        ;               ResizeGadget(#Frame3D_4,WindowWidth(0)/2.517,0,WindowWidth(0)/3.173,WindowHeight(0))
-        ;               ResizeGadget(listbox_event, WindowWidth(0)/1.7, 30, WindowWidth(0)-WindowWidth(0)/1.7, WindowHeight(0)-90)
-        ;               ResizeGadget(listbox_event,WindowWidth(0)/2.517,20,WindowWidth(0)/3.173,WindowHeight(0)-20)
-        ;               ResizeGadget(#Frame3D_5,WindowWidth(0)/1.4,0,WindowWidth(0)/3.476,WindowHeight(0))
-        ;               ResizeGadget(#ListIcon_2,WindowWidth(0)/1.4,20,WindowWidth(0)/3.476,WindowHeight(0)-40)  
-        ;               
-        ;               ResizeGadget(String_13,WindowWidth(0)/1.4,WindowHeight(0)-20,WindowWidth(0)/5,20)  
-        ;               ResizeGadget(Button_31,WindowWidth(0)/1.1,WindowHeight(0)-20,WindowWidth(0)/10,20)  
-        
-        
+
       EndIf
       
     Until Event = #PB_Event_CloseWindow ; End of the event loop
@@ -1998,7 +1922,7 @@ CompilerIf #PB_Compiler_Debugger
     
   CompilerEndIf
 ; IDE Options = PureBasic 5.31 (Windows - x86)
-; CursorPosition = 19
-; FirstLine = 16
+; CursorPosition = 115
+; FirstLine = 92
 ; Folding = ---
 ; EnableXP
