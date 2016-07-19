@@ -184,8 +184,8 @@ Procedure LoadServer(reload)
   
   PreferenceGroup("chars")
   Global characternumber=ReadPreferenceInteger("number",1)
-  ReDim Characters.ACharacter(characternumber-1)
-  For loadchars=0 To characternumber-1
+  ReDim Characters.ACharacter(characternumber)
+  For loadchars=0 To characternumber
     PreferenceGroup("chars")
     Characters(loadchars)\name=ReadPreferenceString(Str(loadchars+1),"Monokuma")
     PreferenceGroup("pass")
@@ -344,95 +344,6 @@ Procedure LoadServer(reload)
   
 EndProcedure
 
-Procedure SendTarget(user$,message$,*sender.Client)
-  Define everybody,i
-  omessage$=message$
-  RAWmessage$=message$
-  
-  If user$="*"
-    everybody=1
-  Else
-    everybody=0
-  EndIf
-  
-  For i=0 To characternumber-1
-    If Characters(i)\name=user$
-      user$=Str(i)
-      Break
-    EndIf
-  Next
-  CompilerIf #CROSS
-    If *sender\RAW
-      Debug "sender is RAW"
-      Select Left(message$,2)
-        Case"MC"    
-          message$="MC#"+StringField(message$,3,"#")+".mp3#"+Str(*sender\CID)+"#%"
-        Case "MS"
-          message$="MS#chat#"+StringField(message$,3,"#")+"#"+GetCharacterName(*sender)+"#"+StringField(message$,3,"#")+"#"+StringField(message$,4,"#")+"#wit#1#0#"+Str(*sender\CID)+"#0#0#0#"+Str(*sender\CID)+"#0#"+StringField(message$,6,"#")+"#%"
-          ; MS#chat#(a)smug#Discord#storm#rekt#jud#1#0#9#0#0#0#9#0#0#%
-      EndSelect
-    Else
-      Debug "sender is AO or nothing"
-      Select Left(message$,2)
-        Case"MC"    
-          RAWmessage$="MC#"+GetCharacterName(*sender)+"#"+StringField(ReplaceString(message$,".mp3",""),2,"#")+"#"+areas(*sender\area)\bg+"#"+Str(*sender\CID)+"#%"
-        Case "MS"
-          RAWmessage$="MS#"+GetCharacterName(*sender)+"#"+StringField(message$,3,"#")+"#"+StringField(message$,6,"#")+"#char#"+StringField(message$,16,"#")+"#"+Str(*sender\CID)+"#%"
-          ; MS#chat#(a)smug#Discord#storm#rekt#jud#1#0#9#0#0#0#9#0#0#%
-        Case "IL"
-          RAWmessage$="CT#SERVER#"+Mid(message$,3)
-          Debug "CT#SERVER"+Mid(message$,3)
-      EndSelect
-    EndIf
-  CompilerEndIf
-  LockMutex(ListMutex)
-  
-  If FindMapElement(Clients(),user$)
-    
-    If Clients()\type=#WEBSOCKET
-      CompilerIf #WEB
-        Websocket_SendTextFrame(Clients()\ClientID,message$)
-      CompilerEndIf
-    Else
-      Debug message$
-      sresult=SendNetworkString(Clients()\ClientID,message$)  
-      If sresult=-1
-        WriteLog("CLIENT DIED DIRECTLY",Clients())
-        If areas(Clients()\area)\lock=Clients()\ClientID
-          areas(Clients()\area)\lock=0
-          areas(Clients()\area)\mlock=0
-        EndIf
-        DeleteMapElement(Clients(),Str(Clients()\ClientID))
-        rf=1
-      EndIf
-    EndIf
-  Else
-    ResetMap(Clients())
-    While NextMapElement(Clients())
-      If user$=Str(Clients()\CID) Or user$=Clients()\HD Or user$=Clients()\IP Or user$=Clients()\username Or user$="Area"+Str(Clients()\area) Or (everybody And (*sender\area=Clients()\area Or *sender\area=-1)) And Clients()\type=*sender\type
-        If Clients()\type=#WEBSOCKET
-          CompilerIf #WEB
-            Websocket_SendTextFrame(Clients()\ClientID,message$)
-          CompilerEndIf
-        Else
-          Debug message$
-          sresult=SendNetworkString(Clients()\ClientID,message$)
-          If sresult=-1
-            WriteLog("CLIENT DIED",Clients())
-            If areas(Clients()\area)\lock=Clients()\ClientID
-              areas(Clients()\area)\lock=0
-              areas(Clients()\area)\mlock=0
-            EndIf
-            DeleteMapElement(Clients(),Str(Clients()\ClientID))
-            rf=1
-          EndIf
-        EndIf
-      EndIf
-    Wend   
-  EndIf
-  UnlockMutex(ListMutex)
-EndProcedure
-
 Procedure ListIP(ClientID)
   Define send.b
   Define iplist$
@@ -468,7 +379,7 @@ Procedure KickBan(kick$,action,perm)
   If kick$="everybody"
     everybody.b=1
   EndIf
-  For i=0 To characternumber-1
+  For i=0 To characternumber
     If Characters(i)\name=kick$
       kick$=Str(i)
       Break
@@ -722,7 +633,6 @@ Procedure SwitchAreas(*usagePointer.Client,narea$)
         areas(*usagePointer\area)\mlock=0
       EndIf
       areas(*usagePointer\area)\players-1
-      SendTarget("*","RoC#"+Str(oarea)+"#"+Str(areas(*usagePointer\area)\players)+"#"+Str(narea)+"#"+Str(areas(0)\players+1)+"#%",Server)
       *usagePointer\area=narea
       areas(*usagePointer\area)\players+1
       If sendd=1
@@ -731,7 +641,7 @@ Procedure SwitchAreas(*usagePointer.Client,narea$)
       Else
         SendTarget(Str(*usagePointer\ClientID),"ROOK#"+Str(areas(*usagePointer\area)\good)+"#"+Str(areas(*usagePointer\area)\evil)+"#%",Server)
       EndIf
-      
+      SendTarget(Str(*usagePointer\ClientID),"RoC#"+Str(oarea)+"#"+Str(areas(*usagePointer\area)\players)+"#"+Str(narea)+"#"+Str(areas(0)\players+1)+"#%",Server)
     Else
       SendTarget(Str(*usagePointer\ClientID),"FI#area locked#%",Server)
     EndIf
@@ -740,8 +650,6 @@ Procedure SwitchAreas(*usagePointer.Client,narea$)
     SendTarget(Str(*usagePointer\ClientID),"FI#Not a valid area#%",Server)
   EndIf
 EndProcedure
-
-
 
 Procedure SendAreas(ClientID)
   Define send$
@@ -755,6 +663,7 @@ Procedure SendAreas(ClientID)
     EndIf
   Wend
   For adareas=0 To Aareas-1
+    areas(adareas)\players=APlayers(adareas)
     If APlayers(adareas)>0
       send$=send$+"RaC#"+Str(adareas+1)+"#"+Str(APlayers(adareas))+"#%"
     EndIf
@@ -780,7 +689,7 @@ Procedure CheckInternetCode(*usagePointer.Client)
       WriteLog("["+GetCharacterName(*usagePointer)+"]["+StringField(rawreceive$,4,"#")+"]",*usagePointer)
       If areas(*usagePointer\area)\wait=0 Or *usagePointer\perm
         msreply$=rawreceive$
-        Sendtarget("*",msreply$,*usagePointer)
+        Sendtarget("Area"+Str(*usagePointer\area),msreply$,*usagePointer)
         areas(*usagePointer\area)\wait=*usagePointer\ClientID
         CreateThread(@MSWait(),*usagePointer)
       EndIf
@@ -801,7 +710,7 @@ Procedure CheckInternetCode(*usagePointer.Client)
       If Not (music=0 Or GetCharacterName(*usagePointer) <> StringField(rawreceive$,2,"#"))
         
         If *usagePointer\ignoremc=0
-          Sendtarget("*","MC#"+GetCharacterName(*usagePointer)+"#"+StringField(rawreceive$,3,"#")+"#"+areas(*usagePointer\area)\bg+"#"+Str(*usagePointer\CID)+"#%",*usagePointer)
+          Sendtarget("Area"+Str(*usagePointer\area),"MC#"+GetCharacterName(*usagePointer)+"#"+StringField(rawreceive$,3,"#")+"#"+areas(*usagePointer\area)\bg+"#"+Str(*usagePointer\CID)+"#%",*usagePointer)
           WriteLog("["+GetCharacterName(*usagePointer)+"] changed music to "+StringField(rawreceive$,3,"#"),*usagePointer)
         EndIf
         ;         
@@ -1135,7 +1044,7 @@ Procedure CheckInternetCode(*usagePointer.Client)
             Default
               *usagePointer\hack=1
           EndSelect
-          SendTarget("*","HP#GOOD#"+Str(Areas(*usagePointer\area)\good)+"#%",*usagePointer)
+          SendTarget("Area"+Str(*usagePointer\area),"HP#GOOD#"+Str(Areas(*usagePointer\area)\good)+"#%",*usagePointer)
         Case "EVIL"
           Select StringField(rawreceive$,3,"#")
             Case "ADD"
@@ -1150,7 +1059,7 @@ Procedure CheckInternetCode(*usagePointer.Client)
               *usagePointer\hack=1
           EndSelect
           Areas(*usagePointer\area)\evil=bar
-          SendTarget("*","HP#EVIL#"+Str(Areas(*usagePointer\area)\evil)+"#%",*usagePointer)
+          SendTarget("Area"+Str(*usagePointer\area),"HP#EVIL#"+Str(Areas(*usagePointer\area)\evil)+"#%",*usagePointer)
         Default
           *usagePointer\hack=1
       EndSelect
@@ -1211,7 +1120,7 @@ Procedure CheckInternetCode(*usagePointer.Client)
           random+Random(dicemax,1)
         EndIf
       Next
-      SendTarget("*","FI#"+GetCharacterName(*usagePointer)+" rolled: "+Str(rolls)+"d"+Str(dicemax)+", Result: "+Str(random)+"#"+FormatDate("%hh:%ii:%ss",Date())+"#%",*usagePointer)
+      SendTarget("Area"+Str(*usagePointer\area),"FI#"+GetCharacterName(*usagePointer)+" rolled: "+Str(rolls)+"d"+Str(dicemax)+", Result: "+Str(random)+"#"+FormatDate("%hh:%ii:%ss",Date())+"#%",*usagePointer)
       
     Case "FB"
       SendTarget(Str(ClientID),"KC#go be gay somewhere else#%",Server)
@@ -1922,7 +1831,7 @@ CompilerIf #PB_Compiler_Debugger
     
   CompilerEndIf
 ; IDE Options = PureBasic 5.31 (Windows - x86)
-; CursorPosition = 115
-; FirstLine = 92
-; Folding = ---
+; CursorPosition = 837
+; FirstLine = 828
+; Folding = --
 ; EnableXP
