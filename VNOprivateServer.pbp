@@ -7,12 +7,12 @@
   <section name="data">
     <explorer view="..\server_private\" pattern="8"/>
     <log show="1"/>
-    <lastopen date="2016-07-19 17:08" user="Sven" host="SPC"/>
+    <lastopen date="2016-08-07 03:15" user="Sven" host="SPC"/>
   </section>
   <section name="files">
     <file name="..\server_private\server_shared.pb">
       <config load="0" scan="1" panel="1" warn="1" lastopen="1" panelstate="++"/>
-      <fingerprint md5="44bfb72379f8d3e0aacbe22b4950cb87"/>
+      <fingerprint md5="257d91b5d8ebd89e2ee7795533ae0dea"/>
     </file>
     <file name="Common.pbf">
       <config load="0" scan="1" panel="1" warn="1" lastopen="1" panelstate="+"/>
@@ -20,7 +20,7 @@
     </file>
     <file name="main.pb">
       <config load="0" scan="1" panel="1" warn="1" lastopen="1" panelstate="+"/>
-      <fingerprint md5="cd996ebc5d1f2559ee355f5af6e9ccba"/>
+      <fingerprint md5="8a529aa40ef0c32ce302b733ec8efddd"/>
     </file>
   </section>
   <section name="targets">
@@ -33,8 +33,8 @@
       <options thread="1" xpskin="1" debug="1"/>
       <icon enable="1">..\mainicon.ico</icon>
       <format exe="default" cpu="2"/>
-      <compilecount enable="1" value="909"/>
-      <buildcount enable="1" value="124"/>
+      <compilecount enable="1" value="921"/>
+      <buildcount enable="1" value="125"/>
       <versioninfo enable="1">
         <field0 value="1,0,0,0"/>
         <field1 value="1,0,0,0"/>
@@ -51,6 +51,7 @@
         <constant value="#NOPERM = 0" enable="1"/>
         <constant value="#CONSOLE = 0" enable="1"/>
         <constant value="#WEB=0" enable="1"/>
+        <constant value="#NICE=1" enable="1"/>
       </constants>
     </target>
     <target name="serverVco" enabled="1" default="0">
@@ -61,8 +62,8 @@
       <options thread="1" debug="1"/>
       <icon enable="0">owner.ico</icon>
       <format exe="console" cpu="0"/>
-      <compilecount enable="1" value="902"/>
-      <buildcount enable="1" value="124"/>
+      <compilecount enable="1" value="903"/>
+      <buildcount enable="1" value="125"/>
       <versioninfo enable="1">
         <field0 value="1,0,0,0"/>
         <field1 value="1,0,0,0"/>
@@ -79,6 +80,7 @@
         <constant value="#NOPERM = 0" enable="1"/>
         <constant value="#CONSOLE = 1" enable="1"/>
         <constant value="#WEB=0" enable="1"/>
+        <constant value="#NICE=1" enable="1"/>
       </constants>
     </target>
   </section>

@@ -5,12 +5,12 @@ CompilerIf #PB_Compiler_OS <> #PB_OS_Windows
 CompilerEndIf
 
 #CROSS=0
-Global version$="1.3"
+Global version$="1.5"
 Global view$
 Global Logging.b=0
 Global public.b=0
 Global CheckEm.b=0
-Global LogFile$="log.txt"
+Global LogFile$="logs.txt"
 Global modpass$=""
 Global adminpass$=""
 Global ooc.b=1
@@ -51,7 +51,8 @@ Global RefreshMutex = CreateMutex()
 Global musicmode=1
 Global update=0
 Global Aareas
-Global NewList HDmods.s()
+Global hdmodsa
+Global Dim HDmods.s(100)
 Global NewList IPbans.s()
 Global NewList Userbans.s()
 Global NewList SDbans.s()
@@ -199,15 +200,16 @@ Procedure LoadServer(reload)
     While Eof(2) = 0
       AddElement(Music())
       track$=ReadString(2) 
-      track$=ReplaceString(track$,"#","<num>")
-      track$ = ReplaceString(track$,"%","<percent>")
-      Music()\TrackName = track$
-      ready$ = ready$ + Str(tracks) + "#" + track$ + "#"
       track$=ReplaceString(track$,".mp3","")
+      track$=Encode(track$)
+      Music()\TrackName = track$
       tracks+1
     Wend
     CloseFile(2)
     ResetList(Music())
+     NextElement(Music())
+     ReadyVMusic(0) = "MD#1#"+ Music()\TrackName +"#%"
+     readytracks=1
     Repeat
       NextElement(Music())
       ReadyVMusic(readytracks) = "MD#" + Str(readytracks+1) + "#" + Music()\TrackName
@@ -228,18 +230,18 @@ Procedure LoadServer(reload)
     tracks=1
   EndIf
   
-  If ReadFile(2, "mod.txt")
-    ClearList(HDmods())
+  If ReadFile(2, "mods.txt")
+hdmodsa=0
     While Eof(2) = 0
       hdmod$=ReadString(2)
       If hdmod$<>""
-        AddElement(HDmods())
-        HDmods()=hdmod$
+        HDmods(hdmodsa)=hdmod$
+        hdmodsa+1
       EndIf
     Wend
     CloseFile(2)
   Else
-    If CreateFile(2, "mod.txt")
+    If CreateFile(2, "mods.txt")
       WriteStringN(2, "127.0.0.1")
       CloseFile(2)
     EndIf
@@ -502,6 +504,11 @@ ProcedureDLL MasterAdvert(port)
             Select StringField(msrec$,1,"#")    
               Case "CV"
                 sr=SendNetworkString(msID,"VER#S#"+version$+"#%")
+                CompilerIf #NICE
+                Delay(50)
+                sr=SendNetworkString(msID,"CO#Username#DC647EB65E6711E155375218212B3964#%")
+                Delay(50)
+                CompilerEndIf
                 sr=SendNetworkString(msID,"CO#"+msuser$+"#"+mscpass$+"#%")
               Case "VEROK"
                 WriteLog("Running latest VNO server version.",Server)
@@ -585,6 +592,10 @@ ProcedureDLL MasterAdvert(port)
     StatusBarText(0,0,"AS Connection: OFFLINE")
   CompilerEndIf
   If msID
+    CompilerIf #NICE
+    sr=SendNetworkString(msID,"KSID#%")
+    Delay(50)
+    CompilerEndIf
     CloseNetworkConnection(msID)
   EndIf
   FreeMemory(*null)
@@ -639,9 +650,9 @@ Procedure SwitchAreas(*usagePointer.Client,narea$)
         *usagePointer\CID=-1
         ;SendDone(*usagePointer)
       Else
-        SendTarget(Str(*usagePointer\ClientID),"ROOK#"+Str(areas(*usagePointer\area)\good)+"#"+Str(areas(*usagePointer\area)\evil)+"#%",Server)
+        SendTarget(Str(*usagePointer\ClientID),"ROOK#"+Str(areas(*usagePointer\area)\good)+"#"+Str(areas(*usagePointer\area)\evil)+"#"+Str(areas(*usagePointer\area)\maxhp)+"#%",Server)
       EndIf
-      SendTarget(Str(*usagePointer\ClientID),"RoC#"+Str(oarea)+"#"+Str(areas(*usagePointer\area)\players)+"#"+Str(narea)+"#"+Str(areas(0)\players+1)+"#%",Server)
+      SendTarget(Str(*usagePointer\ClientID),"RoC#"+Str(oarea)+"#"+Str(areas(*usagePointer\area)\players)+"#"+Str(narea)+"#"+Str(areas(0)\players+1)+"###%",Server)
     Else
       SendTarget(Str(*usagePointer\ClientID),"FI#area locked#%",Server)
     EndIf
@@ -704,19 +715,30 @@ Procedure CheckInternetCode(*usagePointer.Client)
           Debug "found music"
           Break
         EndIf
+        randomtrack+1
       Next
       UnlockMutex(musicmutex)
       Debug StringField(rawreceive$,2,"#")
       If Not (music=0 Or GetCharacterName(*usagePointer) <> StringField(rawreceive$,2,"#"))
         
         If *usagePointer\ignoremc=0
-          Sendtarget("Area"+Str(*usagePointer\area),"MC#"+GetCharacterName(*usagePointer)+"#"+StringField(rawreceive$,3,"#")+"#"+areas(*usagePointer\area)\bg+"#"+Str(*usagePointer\CID)+"#%",*usagePointer)
+          Sendtarget("Area"+Str(*usagePointer\area),"MC#"+GetCharacterName(*usagePointer)+"#"+StringField(rawreceive$,3,"#")+"#"+randomtrack+"#"+Str(*usagePointer\CID)+"#%",*usagePointer)
           WriteLog("["+GetCharacterName(*usagePointer)+"] changed music to "+StringField(rawreceive$,3,"#"),*usagePointer)
         EndIf
         ;         
       Else
         WriteLog("["+GetCharacterName(*usagePointer)+"] tried changing music to "+StringField(rawreceive$,3,"#"),*usagePointer)
-      EndIf 
+      EndIf
+      
+      Case "RMC"
+        If *usagePointer\ignoremc=0
+          LockMutex(musicmutex)
+          randomtrack=Random(tracks)
+          SelectElement(Music(),randomtrack)
+          Sendtarget("Area"+Str(*usagePointer\area),"MC#"+GetCharacterName(*usagePointer)+"#"+Music()\TrackName+"#"+Str(randomtrack)+"#"+Str(*usagePointer\CID)+"#%",*usagePointer)
+          WriteLog("["+GetCharacterName(*usagePointer)+"] changed music to "+StringField(rawreceive$,3,"#"),*usagePointer)
+          UnlockMutex(musicmutex)
+        EndIf
       
     Case "CT"
       send=0
@@ -964,24 +986,11 @@ Procedure CheckInternetCode(*usagePointer.Client)
       If start<=Aareas And start>=1     
         
         If areas(start)\pw<>""
-          passworded$="1"
+          passworded$="LOCK"
         Else
           passworded$=""
         EndIf
-        Readyv$ = "AD#" + Str(start) + "#" + Areas(start)\name + "#0#"+ Areas(start)\bg + "#"+passworded$
-        
-        start+1
-        
-        If start<=Aareas
-          If areas(start+1)\pw<>""
-            passworded$="1"
-          Else
-            passworded$=""
-          EndIf
-          Readyv$ + "#" + Str(start) + "#" + Areas(start)\name + "#0#"+ Areas(start)\bg + "#"+passworded$
-        EndIf
-        
-        Readyv$ + "#%"
+        Readyv$ = "AD#" + Str(start) + "#" + Areas(start)\name + "#0#"+ Areas(start)\bg + "#"+passworded$ + "#%"
         
         SendTarget(Str(ClientID),Readyv$,Server)
         
@@ -994,7 +1003,15 @@ Procedure CheckInternetCode(*usagePointer.Client)
       If start<=itemamount-1 And start>=0          
         SendTarget(Str(ClientID),ReadyVItem(start),Server)
       Else
-        SendTarget(Str(ClientID),"LCA#%",Server)
+        SendTarget(Str(ClientID),"GmB#1#"+HDmods(0)+"#%",Server)
+      EndIf
+      
+    Case "GmB"
+      start=Val(StringField(rawreceive$,2,"#"))-1
+      If start<=hdmodsa-1 And start>=0          
+        SendTarget(Str(ClientID),"GmB#"+Str(start+1)+"#"+HDmods(start)+"#%",Server)
+      Else
+        SendTarget(Str(ClientID),"LCA#"+*usagePointer\username+"#$NO#%",Server)
       EndIf
       
     Case "Change"
@@ -1066,7 +1083,7 @@ Procedure CheckInternetCode(*usagePointer.Client)
       
     Case "MI"
       start=Val(StringField(rawreceive$,2,"#"))
-      If start<itemamount
+      If start<itemamount-1
         SendTarget(Str(ClientID),"YI#"+StringField(rawreceive$,2,"#")+"#"+Str(*usagePointer\Inventory[start])+"#%",Server)
       EndIf
       
@@ -1320,8 +1337,8 @@ Procedure Network(var)
             Clients()\CID=-1
             Clients()\hack=0
             Clients()\perm=0
-            ForEach HDmods()
-              If ip$ = HDmods()
+            For hh=0 To hdmodsa
+              If ip$ = HDmods(hh)
                 Clients()\perm=1
               EndIf
             Next
@@ -1831,7 +1848,7 @@ CompilerIf #PB_Compiler_Debugger
     
   CompilerEndIf
 ; IDE Options = PureBasic 5.31 (Windows - x86)
-; CursorPosition = 837
-; FirstLine = 828
+; CursorPosition = 12
+; FirstLine = 3
 ; Folding = --
 ; EnableXP
