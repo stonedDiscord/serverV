@@ -72,23 +72,11 @@ CompilerIf #CONSOLE=0
   IncludeFile "Common.pbf"
 CompilerEndIf
 
-IncludeFile "../server_private/server_shared.pb"
+IncludeFile "../serverD/server_shared.pb"
 Global Dim Items.ItemData(100)
 ;- Define Functions
 ; yes after the network init and include code
 ; many of these depend on that
-
-Procedure MSWait(*usagePointer.Client)
-  Define wttime
-  Debug areas(*usagePointer\area)\wait
-  Debug *usagePointer\area
-  wttime=Len(Trim(StringField(*usagePointer\last,4,"#")))*60
-  If wttime>5000
-    wttime=5000
-  EndIf
-  Delay(wttime)
-  areas(*usagePointer\area)\wait=0
-EndProcedure
 
 ;- Load Settings function
 Procedure LoadServer(reload)
@@ -179,6 +167,7 @@ Procedure LoadServer(reload)
   
   For iniarea=0 To 100
     areas(iniarea)\bg=oBG.s
+    areas(iniarea)\maxhp=30
     areas(iniarea)\good=30
     areas(iniarea)\evil=30
   Next
@@ -188,7 +177,7 @@ Procedure LoadServer(reload)
   ReDim Characters.ACharacter(characternumber)
   For loadchars=0 To characternumber
     PreferenceGroup("chars")
-    Characters(loadchars)\name=ReadPreferenceString(Str(loadchars+1),"Monokuma")
+    Characters(loadchars)\name=ReadPreferenceString(Str(loadchars+1),"Sho")
     PreferenceGroup("pass")
     Characters(loadchars)\pw=ReadPreferenceString(Str(loadchars+1),"")
   Next  
@@ -352,22 +341,22 @@ Procedure ListIP(ClientID)
   Define charname$
   Define char
   send=0
-  iplist$="CT#$HOST#"
+  iplist$="IPC#"
   LockMutex(ListMutex)  
   ResetMap(Clients())
-  While NextMapElement(Clients())
-    Select Clients()\perm
-      Case 1
-        charname$=GetCharacterName(Clients())+"(mod)"
-      Case 2
-        charname$=GetCharacterName(Clients())+"(admin)"
-      Case 3
-        charname$=GetCharacterName(Clients())+"(server)"
-      Default
-        charname$=GetCharacterName(Clients())
-    EndSelect
-    iplist$=iplist$+Clients()\IP+"|"+charname$+"|"+Str(Clients()\CID)+"|*"
-  Wend
+While NextMapElement(Clients())
+        Select Clients()\perm
+          Case 1
+            mstr$="M"
+          Case 2
+            mstr$="A"
+          Case 3
+            mstr$="S"
+          Default
+            mstr$="U"
+        EndSelect
+        iplist$=iplist$+Str(Clients()\AID)+":"+mstr$+": "+Clients()\username+"  :  "+Clients()\IP+"  :  "+GetCharacterName(Clients())+"  :  "+GetAreaName(Clients())+#CRLF$
+      Wend
   UnlockMutex(ListMutex)
   iplist$=iplist$+"#%"
   SendTarget(Str(ClientID),iplist$,Server) 
@@ -650,9 +639,18 @@ Procedure SwitchAreas(*usagePointer.Client,narea$)
         *usagePointer\CID=-1
         ;SendDone(*usagePointer)
       Else
+        Select areas(*usagePointer\area)\status
+            Case #REPLAY
+              amode$=" [TT]"
+            Case #CASINGOPEN
+              amode$=" [RP]"
+            Default
+              amode$=""
+          EndSelect
         SendTarget(Str(*usagePointer\ClientID),"ROOK#"+Str(areas(*usagePointer\area)\good)+"#"+Str(areas(*usagePointer\area)\evil)+"#"+Str(areas(*usagePointer\area)\maxhp)+"#%",Server)
+        SendTarget(Str(*usagePointer\ClientID),"RoC#"+Str(oarea)+"#"+Str(areas(*usagePointer\area)\players)+"#"+Str(narea)+"#"+Str(areas(0)\players+1)+"##"+amode$+"#%",Server)
       EndIf
-      SendTarget(Str(*usagePointer\ClientID),"RoC#"+Str(oarea)+"#"+Str(areas(*usagePointer\area)\players)+"#"+Str(narea)+"#"+Str(areas(0)\players+1)+"###%",Server)
+      
     Else
       SendTarget(Str(*usagePointer\ClientID),"FI#area locked#%",Server)
     EndIf
@@ -1180,13 +1178,54 @@ Procedure CheckInternetCode(*usagePointer.Client)
             EndIf
           EndIf
           send=0
+        Case "THEATER"
+          If *usagePointer\perm
+          tharea=Val(StringField(rawreceive$,3,"#"))
+          rfile$=StringField(rawreceive$,4,"#")
+          rwait=Val(StringField(rawreceive$,5,"#"))
+          EndIf
+        Case "THEATERSTOP"
+          If *usagePointer\perm
+            areas(*usagePointer\area)\status=#IDLE
+            EndIf
+      EndSelect
+      
+          Case "ANIM"        
+      Select StringField(rawreceive$,2,"#")
+        Case "AUTH"
+          If oppass$=StringField(rawreceive$,3,"#")
+            If oppass$<>""
+              SendTarget(Str(ClientID),LoginReply$,Server) 
+              *usagePointer\perm=1
+              *usagePointer\ooct=1
+            EndIf
+          ElseIf adminpass$=StringField(rawreceive$,3,"#")
+            If adminpass$<>""
+              SendTarget(Str(ClientID),LoginReply$,Server) 
+              SendTarget(Str(ClientID),"UM#"+Str(*usagePointer\CID)+"#%",Server)
+              *usagePointer\perm=2
+              *usagePointer\ooct=1
+            EndIf
+          EndIf
+          send=0
+        Case "BRP"
+          If *usagePointer\perm
+          tharea=Val(StringField(rawreceive$,3,"#"))
+          EndIf
+        Case "ERP"
+          If *usagePointer\perm
+            tharea=Val(StringField(rawreceive$,3,"#"))
+            If tharea>0 And tharea<=AAreas
+            areas(tharea)\status=#IDLE
+          EndIf
+          EndIf
       EndSelect
       
     Case "CO"
       *usagePointer\type=#MASTER
       SendTarget(Str(ClientID),"VNAL#"+StringField(rawreceive$,2,"#")+"#%",Server)
-      SendTarget(Str(ClientID),"SDA#1#"+msname$+"#"+msip$+"#"+Str(port)+"#"+desc$+"#http://stoned.ddns.net/#%",Server)
-      SendTarget(Str(ClientID),"SDP#0#"+msname$+"#"+msip$+"#"+Str(port)+"#"+desc$+"#http://stoned.ddns.net/#%",Server)
+      SendTarget(Str(ClientID),"SDA#1#"+msname$+"#"+msip$+"#"+Str(port)+"#"+desc$+"#"+www$+"#%",Server)
+      SendTarget(Str(ClientID),"SDP#0#"+msname$+"#"+msip$+"#"+Str(port)+"#"+desc$+"#"+www$+"#%",Server)
       
     Case "VER"
       *usagePointer\type=#MASTER
@@ -1847,8 +1886,8 @@ CompilerIf #PB_Compiler_Debugger
     End
     
   CompilerEndIf
-; IDE Options = PureBasic 5.31 (Windows - x86)
-; CursorPosition = 12
-; FirstLine = 3
+; IDE Options = PureBasic 5.11 (Linux - x64)
+; CursorPosition = 357
+; FirstLine = 355
 ; Folding = --
 ; EnableXP
