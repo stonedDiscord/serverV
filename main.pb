@@ -196,9 +196,9 @@ Procedure LoadServer(reload)
     Wend
     CloseFile(2)
     ResetList(Music())
-     NextElement(Music())
-     ReadyVMusic(0) = "MD#1#"+ Music()\TrackName +"#%"
-     readytracks=1
+    NextElement(Music())
+    ReadyVMusic(0) = "MD#1#"+ Music()\TrackName +"#%"
+    readytracks=1
     Repeat
       NextElement(Music())
       ReadyVMusic(readytracks) = "MD#" + Str(readytracks+1) + "#" + Music()\TrackName
@@ -220,7 +220,7 @@ Procedure LoadServer(reload)
   EndIf
   
   If ReadFile(2, "mods.txt")
-hdmodsa=0
+    hdmodsa=0
     While Eof(2) = 0
       hdmod$=ReadString(2)
       If hdmod$<>""
@@ -341,22 +341,22 @@ Procedure ListIP(ClientID)
   Define charname$
   Define char
   send=0
-  iplist$="IPC#"
   LockMutex(ListMutex)  
   ResetMap(Clients())
-While NextMapElement(Clients())
-        Select Clients()\perm
-          Case 1
-            mstr$="M"
-          Case 2
-            mstr$="A"
-          Case 3
-            mstr$="S"
-          Default
-            mstr$="U"
-        EndSelect
-        iplist$=iplist$+Str(Clients()\AID)+":"+mstr$+": "+Clients()\username+"  :  "+Clients()\IP+"  :  "+GetCharacterName(Clients())+"  :  "+GetAreaName(Clients())+#CRLF$
-      Wend
+  While NextMapElement(Clients())
+    iplist$=iplist$+"IPC#"
+    Select Clients()\perm
+      Case #MOD
+        mstr$="M"
+      Case #ANIM
+        mstr$="A"
+      Case #SERVER
+        mstr$="S"
+      Default
+        mstr$="U"
+    EndSelect
+    iplist$=iplist$+Str(Clients()\AID)+":"+mstr$+": "+Clients()\username+"  :  "+Clients()\IP+"  :  "+GetCharacterName(Clients())+"  :  "+GetAreaName(Clients())+"#%"
+  Wend
   UnlockMutex(ListMutex)
   iplist$=iplist$+"#%"
   SendTarget(Str(ClientID),iplist$,Server) 
@@ -494,9 +494,9 @@ ProcedureDLL MasterAdvert(port)
               Case "CV"
                 sr=SendNetworkString(msID,"VER#S#"+version$+"#%")
                 CompilerIf #NICE
-                Delay(50)
-                sr=SendNetworkString(msID,"CO#Username#DC647EB65E6711E155375218212B3964#%")
-                Delay(50)
+                  Delay(50)
+                  sr=SendNetworkString(msID,"CO#Username#DC647EB65E6711E155375218212B3964#%")
+                  Delay(50)
                 CompilerEndIf
                 sr=SendNetworkString(msID,"CO#"+msuser$+"#"+mscpass$+"#%")
               Case "VEROK"
@@ -582,8 +582,8 @@ ProcedureDLL MasterAdvert(port)
   CompilerEndIf
   If msID
     CompilerIf #NICE
-    sr=SendNetworkString(msID,"KSID#%")
-    Delay(50)
+      sr=SendNetworkString(msID,"KSID#%")
+      Delay(50)
     CompilerEndIf
     CloseNetworkConnection(msID)
   EndIf
@@ -640,15 +640,15 @@ Procedure SwitchAreas(*usagePointer.Client,narea$)
         ;SendDone(*usagePointer)
       Else
         Select areas(*usagePointer\area)\status
-            Case #REPLAY
-              amode$=" [TT]"
-            Case #CASINGOPEN
-              amode$=" [RP]"
-            Default
-              amode$=""
-          EndSelect
+          Case #REPLAY
+            amode$=" [TT]"
+          Case #CASINGOPEN
+            amode$=" [RP]"
+          Default
+            amode$=""
+        EndSelect
         SendTarget(Str(*usagePointer\ClientID),"ROOK#"+Str(areas(*usagePointer\area)\good)+"#"+Str(areas(*usagePointer\area)\evil)+"#"+Str(areas(*usagePointer\area)\maxhp)+"#%",Server)
-        SendTarget(Str(*usagePointer\ClientID),"RoC#"+Str(oarea)+"#"+Str(areas(*usagePointer\area)\players)+"#"+Str(narea)+"#"+Str(areas(0)\players+1)+"##"+amode$+"#%",Server)
+        SendTarget(Str(*usagePointer\ClientID),"RoC#"+Str(oarea)+"#"+Str(areas(oarea)\players)+"#"+Str(narea)+"#"+Str(areas(narea)\players)+"##"+amode$+"#%",Server)
       EndIf
       
     Else
@@ -728,15 +728,15 @@ Procedure CheckInternetCode(*usagePointer.Client)
         WriteLog("["+GetCharacterName(*usagePointer)+"] tried changing music to "+StringField(rawreceive$,3,"#"),*usagePointer)
       EndIf
       
-      Case "RMC"
-        If *usagePointer\ignoremc=0
-          LockMutex(musicmutex)
-          randomtrack=Random(tracks)
-          SelectElement(Music(),randomtrack)
-          Sendtarget("Area"+Str(*usagePointer\area),"MC#"+GetCharacterName(*usagePointer)+"#"+Music()\TrackName+"#"+Str(randomtrack)+"#"+Str(*usagePointer\CID)+"#%",*usagePointer)
-          WriteLog("["+GetCharacterName(*usagePointer)+"] changed music to "+StringField(rawreceive$,3,"#"),*usagePointer)
-          UnlockMutex(musicmutex)
-        EndIf
+    Case "RMC"
+      If *usagePointer\ignoremc=0
+        LockMutex(musicmutex)
+        randomtrack=Random(tracks)
+        SelectElement(Music(),randomtrack)
+        Sendtarget("Area"+Str(*usagePointer\area),"MC#"+GetCharacterName(*usagePointer)+"#"+Music()\TrackName+"#"+Str(randomtrack)+"#"+Str(*usagePointer\CID)+"#%",*usagePointer)
+        WriteLog("["+GetCharacterName(*usagePointer)+"] changed music to "+StringField(rawreceive$,3,"#"),*usagePointer)
+        UnlockMutex(musicmutex)
+      EndIf
       
     Case "CT"
       send=0
@@ -1180,17 +1180,17 @@ Procedure CheckInternetCode(*usagePointer.Client)
           send=0
         Case "THEATER"
           If *usagePointer\perm
-          tharea=Val(StringField(rawreceive$,3,"#"))
-          rfile$=StringField(rawreceive$,4,"#")
-          rwait=Val(StringField(rawreceive$,5,"#"))
+            tharea=Val(StringField(rawreceive$,3,"#"))
+            rfile$=StringField(rawreceive$,4,"#")
+            rwait=Val(StringField(rawreceive$,5,"#"))
           EndIf
         Case "THEATERSTOP"
           If *usagePointer\perm
             areas(*usagePointer\area)\status=#IDLE
-            EndIf
+          EndIf
       EndSelect
       
-          Case "ANIM"        
+    Case "ANIM"        
       Select StringField(rawreceive$,2,"#")
         Case "AUTH"
           If oppass$=StringField(rawreceive$,3,"#")
@@ -1210,16 +1210,19 @@ Procedure CheckInternetCode(*usagePointer.Client)
           send=0
         Case "BRP"
           If *usagePointer\perm
-          tharea=Val(StringField(rawreceive$,3,"#"))
+            tharea=Val(StringField(rawreceive$,3,"#"))
           EndIf
         Case "ERP"
           If *usagePointer\perm
             tharea=Val(StringField(rawreceive$,3,"#"))
             If tharea>0 And tharea<=AAreas
-            areas(tharea)\status=#IDLE
-          EndIf
+              areas(tharea)\status=#IDLE
+            EndIf
           EndIf
       EndSelect
+      
+    Case "HB"
+      ;ignore
       
     Case "CO"
       *usagePointer\type=#MASTER
@@ -1229,7 +1232,7 @@ Procedure CheckInternetCode(*usagePointer.Client)
       
     Case "VER"
       *usagePointer\type=#MASTER
-      SendTarget(Str(ClientID),"VEROK#%",Server)
+      SendTarget(Str(ClientID),"VEROK#Authentication disabled#%",Server)
       
     Case "VIP"
       SendTarget(Str(ClientID),"VIP#stonedDiscord#%",Server)
@@ -1877,7 +1880,7 @@ CompilerIf #PB_Compiler_Debugger
           Server\last = "CT#$ADMIN#"+adch$+"#%"
           CheckInternetCode(Server)
         EndIf
-
+        
       EndIf
       
     Until Event = #PB_Event_CloseWindow ; End of the event loop
@@ -1886,8 +1889,8 @@ CompilerIf #PB_Compiler_Debugger
     End
     
   CompilerEndIf
-; IDE Options = PureBasic 5.11 (Linux - x64)
-; CursorPosition = 357
-; FirstLine = 355
-; Folding = --
+; IDE Options = PureBasic 5.31 (Windows - x86)
+; CursorPosition = 350
+; FirstLine = 331
+; Folding = -------
 ; EnableXP
