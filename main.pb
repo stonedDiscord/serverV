@@ -166,6 +166,7 @@ Procedure LoadServer(reload)
   
   For iniarea=0 To 100
     areas(iniarea)\bg=oBG.s
+    areas(iniarea)\maxhp=30
     areas(iniarea)\good=30
     areas(iniarea)\evil=30
   Next
@@ -175,7 +176,7 @@ Procedure LoadServer(reload)
   ReDim Characters.ACharacter(characternumber)
   For loadchars=0 To characternumber
     PreferenceGroup("chars")
-    Characters(loadchars)\name=ReadPreferenceString(Str(loadchars+1),"Monokuma")
+    Characters(loadchars)\name=ReadPreferenceString(Str(loadchars+1),"Sho")
     PreferenceGroup("pass")
     Characters(loadchars)\pw=ReadPreferenceString(Str(loadchars+1),"")
   Next  
@@ -194,9 +195,9 @@ Procedure LoadServer(reload)
     Wend
     CloseFile(2)
     ResetList(Music())
-     NextElement(Music())
-     ReadyVMusic(0) = "MD#1#"+ Music()\TrackName +"#%"
-     readytracks=1
+    NextElement(Music())
+    ReadyVMusic(0) = "MD#1#"+ Music()\TrackName +"#%"
+    readytracks=1
     Repeat
       NextElement(Music())
       ReadyVMusic(readytracks) = "MD#" + Str(readytracks+1) + "#" + Music()\TrackName
@@ -218,7 +219,7 @@ Procedure LoadServer(reload)
   EndIf
   
   If ReadFile(2, "mods.txt")
-hdmodsa=0
+    hdmodsa=0
     While Eof(2) = 0
       hdmod$=ReadString(2)
       If hdmod$<>""
@@ -339,21 +340,21 @@ Procedure ListIP(ClientID)
   Define charname$
   Define char
   send=0
-  iplist$="CT#$HOST#"
   LockMutex(ListMutex)  
   ResetMap(Clients())
   While NextMapElement(Clients())
+    iplist$=iplist$+"IPC#"
     Select Clients()\perm
-      Case 1
-        charname$=GetCharacterName(Clients())+"(mod)"
-      Case 2
-        charname$=GetCharacterName(Clients())+"(admin)"
-      Case 3
-        charname$=GetCharacterName(Clients())+"(server)"
+      Case #MOD
+        mstr$="M"
+      Case #ANIM
+        mstr$="A"
+      Case #SERVER
+        mstr$="S"
       Default
-        charname$=GetCharacterName(Clients())
+        mstr$="U"
     EndSelect
-    iplist$=iplist$+Clients()\IP+"|"+charname$+"|"+Str(Clients()\CID)+"|*"
+    iplist$=iplist$+Str(Clients()\AID)+":"+mstr$+": "+Clients()\username+"  :  "+Clients()\IP+"  :  "+GetCharacterName(Clients())+"  :  "+GetAreaName(Clients())+"#%"
   Wend
   UnlockMutex(ListMutex)
   iplist$=iplist$+"#%"
@@ -489,9 +490,9 @@ ProcedureDLL MasterAdvert(port)
               Case "CV"
                 sr=SendNetworkString(msID,"VER#S#"+version$+"#%")
                 CompilerIf #NICE
-                Delay(50)
-                sr=SendNetworkString(msID,"CO#Username#DC647EB65E6711E155375218212B3964#%")
-                Delay(50)
+                  Delay(50)
+                  sr=SendNetworkString(msID,"CO#Username#DC647EB65E6711E155375218212B3964#%")
+                  Delay(50)
                 CompilerEndIf
                 sr=SendNetworkString(msID,"CO#"+msuser$+"#"+mscpass$+"#%")
               Case "VEROK"
@@ -579,8 +580,8 @@ ProcedureDLL MasterAdvert(port)
   CompilerEndIf
   If msID
     CompilerIf #NICE
-    sr=SendNetworkString(msID,"KSID#%")
-    Delay(50)
+      sr=SendNetworkString(msID,"KSID#%")
+      Delay(50)
     CompilerEndIf
     CloseNetworkConnection(msID)
   EndIf
@@ -636,9 +637,18 @@ Procedure SwitchAreas(*usagePointer.Client,narea$)
         *usagePointer\CID=-1
         ;SendDone(*usagePointer)
       Else
+        Select areas(*usagePointer\area)\status
+          Case #REPLAY
+            amode$=" [TT]"
+          Case #CASINGOPEN
+            amode$=" [RP]"
+          Default
+            amode$=""
+        EndSelect
         SendTarget(Str(*usagePointer\ClientID),"ROOK#"+Str(areas(*usagePointer\area)\good)+"#"+Str(areas(*usagePointer\area)\evil)+"#"+Str(areas(*usagePointer\area)\maxhp)+"#%",Server)
+        SendTarget(Str(*usagePointer\ClientID),"RoC#"+Str(oarea)+"#"+Str(areas(oarea)\players)+"#"+Str(narea)+"#"+Str(areas(narea)\players)+"##"+amode$+"#%",Server)
       EndIf
-      SendTarget(Str(*usagePointer\ClientID),"RoC#"+Str(oarea)+"#"+Str(areas(*usagePointer\area)\players)+"#"+Str(narea)+"#"+Str(areas(0)\players+1)+"###%",Server)
+      
     Else
       SendTarget(Str(*usagePointer\ClientID),"FI#area locked#%",Server)
     EndIf
@@ -716,15 +726,15 @@ Procedure CheckInternetCode(*usagePointer.Client)
         WriteLog("["+GetCharacterName(*usagePointer)+"] tried changing music to "+StringField(rawreceive$,3,"#"),*usagePointer)
       EndIf
       
-      Case "RMC"
-        If *usagePointer\ignoremc=0
-          LockMutex(musicmutex)
-          randomtrack=Random(tracks)
-          SelectElement(Music(),randomtrack)
-          Sendtarget("Area"+Str(*usagePointer\area),"MC#"+GetCharacterName(*usagePointer)+"#"+Music()\TrackName+"#"+Str(randomtrack)+"#"+Str(*usagePointer\CID)+"#%",*usagePointer)
-          WriteLog("["+GetCharacterName(*usagePointer)+"] changed music to "+StringField(rawreceive$,3,"#"),*usagePointer)
-          UnlockMutex(musicmutex)
-        EndIf
+    Case "RMC"
+      If *usagePointer\ignoremc=0
+        LockMutex(musicmutex)
+        randomtrack=Random(tracks)
+        SelectElement(Music(),randomtrack)
+        Sendtarget("Area"+Str(*usagePointer\area),"MC#"+GetCharacterName(*usagePointer)+"#"+Music()\TrackName+"#"+Str(randomtrack)+"#"+Str(*usagePointer\CID)+"#%",*usagePointer)
+        WriteLog("["+GetCharacterName(*usagePointer)+"] changed music to "+StringField(rawreceive$,3,"#"),*usagePointer)
+        UnlockMutex(musicmutex)
+      EndIf
       
     Case "CT"
       send=0
@@ -1166,7 +1176,51 @@ Procedure CheckInternetCode(*usagePointer.Client)
             EndIf
           EndIf
           send=0
+        Case "THEATER"
+          If *usagePointer\perm
+            tharea=Val(StringField(rawreceive$,3,"#"))
+            rfile$=StringField(rawreceive$,4,"#")
+            rwait=Val(StringField(rawreceive$,5,"#"))
+          EndIf
+        Case "THEATERSTOP"
+          If *usagePointer\perm
+            areas(*usagePointer\area)\status=#IDLE
+          EndIf
       EndSelect
+      
+    Case "ANIM"        
+      Select StringField(rawreceive$,2,"#")
+        Case "AUTH"
+          If oppass$=StringField(rawreceive$,3,"#")
+            If oppass$<>""
+              SendTarget(Str(ClientID),LoginReply$,Server) 
+              *usagePointer\perm=1
+              *usagePointer\ooct=1
+            EndIf
+          ElseIf adminpass$=StringField(rawreceive$,3,"#")
+            If adminpass$<>""
+              SendTarget(Str(ClientID),LoginReply$,Server) 
+              SendTarget(Str(ClientID),"UM#"+Str(*usagePointer\CID)+"#%",Server)
+              *usagePointer\perm=2
+              *usagePointer\ooct=1
+            EndIf
+          EndIf
+          send=0
+        Case "BRP"
+          If *usagePointer\perm
+            tharea=Val(StringField(rawreceive$,3,"#"))
+          EndIf
+        Case "ERP"
+          If *usagePointer\perm
+            tharea=Val(StringField(rawreceive$,3,"#"))
+            If tharea>0 And tharea<=AAreas
+              areas(tharea)\status=#IDLE
+            EndIf
+          EndIf
+      EndSelect
+      
+    Case "HB"
+      ;ignore
       
     Case "VIP"
       SendTarget(Str(ClientID),"VIP#stonedDiscord#%",Server)
@@ -1814,7 +1868,7 @@ CompilerIf #PB_Compiler_Debugger
           Server\last = "CT#$ADMIN#"+adch$+"#%"
           CheckInternetCode(Server)
         EndIf
-
+        
       EndIf
       
     Until Event = #PB_Event_CloseWindow ; End of the event loop
@@ -1824,7 +1878,7 @@ CompilerIf #PB_Compiler_Debugger
     
   CompilerEndIf
 ; IDE Options = PureBasic 5.31 (Windows - x86)
-; CursorPosition = 507
-; FirstLine = 512
+; CursorPosition = 73
+; FirstLine = 63
 ; Folding = --
 ; EnableXP
