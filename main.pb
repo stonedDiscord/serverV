@@ -9,7 +9,6 @@ Global version$="1.5"
 Global view$
 Global Logging.b=0
 Global public.b=0
-Global CheckEm.b=0
 Global LogFile$="logs.txt"
 Global modpass$=""
 Global adminpass$=""
@@ -77,18 +76,6 @@ Global Dim Items.ItemData(100)
 ;- Define Functions
 ; yes after the network init and include code
 ; many of these depend on that
-
-Procedure MSWait(*usagePointer.Client)
-  Define wttime
-  Debug areas(*usagePointer\area)\wait
-  Debug *usagePointer\area
-  wttime=Len(Trim(StringField(*usagePointer\last,4,"#")))*60
-  If wttime>5000
-    wttime=5000
-  EndIf
-  Delay(wttime)
-  areas(*usagePointer\area)\wait=0
-EndProcedure
 
 ;- Load Settings function
 Procedure LoadServer(reload)
@@ -464,7 +451,6 @@ ProcedureDLL MasterAdvert(port)
   PreferenceGroup("AS")
   master$=ReadPreferenceString("1","54.93.210.149")
   PreferenceGroup("login")
-  CheckEm=ReadPreferenceInteger("Check",0)
   mscpass$=UCase(MD5Fingerprint(@mspass$,StringByteLength(mspass$)))
   msport=6543
   ClosePreferences() 
@@ -474,9 +460,7 @@ ProcedureDLL MasterAdvert(port)
   desc$=ReplaceString(desc$,"%","!") 
   
   WriteLog("Using master "+master$, Server)
-  
-  If public
-    
+  Global msstop=0
     Repeat      
       If msID
         NEvent=NetworkClientEvent(msID)
@@ -519,7 +503,9 @@ ProcedureDLL MasterAdvert(port)
                 CompilerEndIf
                 public=0
               Case "VNAL"
-                sr=SendNetworkString(msID,"RequestPub#"+msname$+"#"+Str(port)+"#"+desc$+"#"+www$+"#%")
+                If public
+                  sr=SendNetworkString(msID,"RequestPub#"+msname$+"#"+Str(port)+"#"+desc$+"#"+www$+"#%")
+                  EndIf
               Case "No"
                 WriteLog("Wrong master credentials",Server)
               Case "VNOBD"
@@ -585,8 +571,8 @@ ProcedureDLL MasterAdvert(port)
         public=0
       EndIf
       Delay(1000)
-    Until public=0
-  EndIf
+    Until msstop=1
+    
   WriteLog("Masterserver adverter thread stopped",Server)
   CompilerIf #CONSOLE=0
     StatusBarText(0,0,"AS Connection: OFFLINE")
@@ -1182,16 +1168,6 @@ Procedure CheckInternetCode(*usagePointer.Client)
           send=0
       EndSelect
       
-    Case "CO"
-      *usagePointer\type=#MASTER
-      SendTarget(Str(ClientID),"VNAL#"+StringField(rawreceive$,2,"#")+"#%",Server)
-      SendTarget(Str(ClientID),"SDA#1#"+msname$+"#"+msip$+"#"+Str(port)+"#"+desc$+"#http://stoned.ddns.net/#%",Server)
-      SendTarget(Str(ClientID),"SDP#0#"+msname$+"#"+msip$+"#"+Str(port)+"#"+desc$+"#http://stoned.ddns.net/#%",Server)
-      
-    Case "VER"
-      *usagePointer\type=#MASTER
-      SendTarget(Str(ClientID),"VEROK#%",Server)
-      
     Case "VIP"
       SendTarget(Str(ClientID),"VIP#stonedDiscord#%",Server)
       
@@ -1325,7 +1301,7 @@ Procedure Network(var)
           Next 
           
           If send
-            If Server\ClientID And CheckEm
+            If Server\ClientID
               SendNetworkString(Server\ClientID,"CHIP#"+ip$+"#0#%")
             EndIf
             
@@ -1678,7 +1654,7 @@ CompilerIf #PB_Compiler_Debugger
           Case Button_connect
             msuser$=GetGadgetText(Edit1)
             mspass$=GetGadgetText(Edit2)
-            If public And msthread=0
+            If msthread=0
               msthread=CreateThread(@MasterAdvert(),port)
             EndIf
             HideGadget(Edit1, 1)
@@ -1848,7 +1824,7 @@ CompilerIf #PB_Compiler_Debugger
     
   CompilerEndIf
 ; IDE Options = PureBasic 5.31 (Windows - x86)
-; CursorPosition = 12
-; FirstLine = 3
+; CursorPosition = 507
+; FirstLine = 512
 ; Folding = --
 ; EnableXP
