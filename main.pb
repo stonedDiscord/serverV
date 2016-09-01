@@ -24,6 +24,7 @@ Global rt.b=1
 Global loghd.b=0
 Global background.s
 Global PV=1
+Global LoopMusic
 Global msname$="serverV"
 Global desc$="Default server "+version$
 Global www$
@@ -41,7 +42,6 @@ Global ExpertLog=0
 Global tracks=0
 Global itemamount
 Global msthread=0
-Global LoginReply$="MODOK#%"
 Global musicpage=0
 Global ChatMutex = CreateMutex()
 Global ListMutex = CreateMutex()
@@ -93,13 +93,15 @@ Procedure LoadServer(reload)
     Else
       PreferenceGroup("Net")
       WritePreferenceInteger("port",7777)
+      WritePreferenceInteger("public",0)
+      WritePreferenceString("FeaturedID","pawerfawl")
       PreferenceGroup("server")
-      WritePreferenceString("Name", "DEFAULT")
-      WritePreferenceString("Desc", "DEFAULT")
+      WritePreferenceString("Name", "A Default Non Edited VNO Server")
+      WritePreferenceString("Desc", "This is a new Server, untouched! This is the description of it!")
+      WritePreferenceString("scene","http://visualnovelonline.com/")
     EndIf
   EndIf
   PreferenceGroup("net")
-  modpass$=ReadPreferenceString("modpass","")   
   port=ReadPreferenceInteger("port",7777)
   Debug port
   public=ReadPreferenceInteger("public",0)
@@ -108,13 +110,12 @@ Procedure LoadServer(reload)
     SetGadgetState(Checkbox_public,public)
   CompilerElse
     PrintN("Loading serverV "+Str(#PB_Editor_BuildCount)+"."+Str(#PB_Editor_CompileCount)+" settings")
-    PrintN("Modppass:"+modpass$)
     PrintN("Server port:"+Str(port))
     PrintN("Public server:"+Str(public))
   CompilerEndIf
   PreferenceGroup("server")
-  Replays=ReadPreferenceInteger("replaysave",0)
-  replayline=ReadPreferenceInteger("replayline",400)
+  modpass$=ReadPreferenceString("modpass","")
+  animpass$=ReadPreferenceString("animpass","")
   scene$=ReadPreferenceString("scene","VNOVanilla")
   msname$=ReadPreferenceString("Name","serverV")
   desc$=ReadPreferenceString("Desc","Default serverV")
@@ -127,7 +128,6 @@ Procedure LoadServer(reload)
       PreferenceGroup("cfg")
       WritePreferenceString("adminpass","")
       WritePreferenceInteger("modcol",0)
-      WritePreferenceString("LoginReply","CT#$HOST#Successfully connected as mod#%")
       WritePreferenceString("LogFile","log.txt")
     EndIf
   EndIf
@@ -135,9 +135,9 @@ Procedure LoadServer(reload)
   PreferenceGroup("cfg")
   adminpass$=ReadPreferenceString("adminpass","")
   modcol=ReadPreferenceInteger("modcol",0)
-  LoginReply$=ReadPreferenceString("LoginReply","CT#sD#got it#%")
   LogFile$=ReadPreferenceString("LogFile","logs.txt")
   msip$=ReadPreferenceString("MSip","127.0.0.1")
+  LoopMusic=ReadPreferenceInteger("LoopMusic",1)
   If Logging
     CloseFile(1)
   EndIf
@@ -159,7 +159,7 @@ Procedure LoadServer(reload)
     PrintN("Admin pass:"+adminpass$)
     PrintN("Block INI edit:"+Str(blockini))
     PrintN("Moderator color:"+Str(modcol))
-    PrintN("Login reply:"+LoginReply$)
+    PrintN("Login reply:"+"MODOK#%")
     PrintN("Logfile:"+LogFile$)
     PrintN("Logging:"+Str(Logging))
   CompilerEndIf
@@ -198,17 +198,18 @@ Procedure LoadServer(reload)
     NextElement(Music())
     ReadyVMusic(0) = "MD#1#"+ Music()\TrackName +"#%"
     readytracks=1
-    Repeat
-      NextElement(Music())
-      ReadyVMusic(readytracks) = "MD#" + Str(readytracks+1) + "#" + Music()\TrackName
-      If NextElement(Music())
-        ReadyVMusic(readytracks) + "#" + Str(readytracks+2) + "#" + Music()\TrackName
-        PreviousElement(Music())
-      EndIf
-      ReadyVMusic(readytracks)+"#%"
-      readytracks+1
-    Until readytracks=tracks
-    
+    If tracks>1
+      Repeat
+        NextElement(Music())
+        ReadyVMusic(readytracks) = "MD#" + Str(readytracks+1) + "#" + Music()\TrackName
+        If NextElement(Music())
+          ReadyVMusic(readytracks) + "#" + Str(readytracks+2) + "#" + Music()\TrackName
+          PreviousElement(Music())
+        EndIf
+        ReadyVMusic(readytracks)+"#%"
+        readytracks+1
+      Until readytracks=tracks
+    EndIf
   Else
     WriteLog("NO MUSIC LIST",Server)
     AddElement(Music())
@@ -349,6 +350,8 @@ Procedure ListIP(ClientID)
         mstr$="M"
       Case #ANIM
         mstr$="A"
+      Case #ADMIN
+        mstr$="M"  
       Case #SERVER
         mstr$="S"
       Default
@@ -450,7 +453,7 @@ ProcedureDLL MasterAdvert(port)
   WriteLog("Masterserver adverter thread started",Server)
   OpenPreferences("base/AS.ini")
   PreferenceGroup("AS")
-  master$=ReadPreferenceString("1","54.93.210.149")
+  master$=ReadPreferenceString("1","99.105.12.119")
   PreferenceGroup("login")
   mscpass$=UCase(MD5Fingerprint(@mspass$,StringByteLength(mspass$)))
   msport=6543
@@ -462,30 +465,36 @@ ProcedureDLL MasterAdvert(port)
   
   WriteLog("Using master "+master$, Server)
   Global msstop=0
-    Repeat      
-      If msID
-        NEvent=NetworkClientEvent(msID)
-        If NEvent=#PB_NetworkEvent_Disconnect
+  Repeat      
+    If msID
+      NEvent=NetworkClientEvent(msID)
+      If NEvent=#PB_NetworkEvent_Disconnect
+        sr=-1
+        msID=0
+        Server\ClientID=msID
+        CompilerIf #CONSOLE=0
+          StatusBarText(0,0,"AS Connection: ERROR, TRYING TO RECONNECT")
+        CompilerEndIf
+      ElseIf NEvent=#PB_NetworkEvent_Data
+        msinfo=ReceiveNetworkData(msID,*null,100)
+        If msinfo=-1
           sr=-1
-          msID=0
-          Server\ClientID=msID
           CompilerIf #CONSOLE=0
             StatusBarText(0,0,"AS Connection: ERROR, TRYING TO RECONNECT")
           CompilerEndIf
-        ElseIf NEvent=#PB_NetworkEvent_Data
-          msinfo=ReceiveNetworkData(msID,*null,100)
-          If msinfo=-1
-            sr=-1
-            CompilerIf #CONSOLE=0
-              StatusBarText(0,0,"AS Connection: ERROR, TRYING TO RECONNECT")
-            CompilerEndIf
-          Else
-            tick=0
-            retries=0
-            msrec$=PeekS(*null,msinfo)
-            If ExpertLog
-              WriteLog(msrec$,Server)
-            EndIf
+        Else
+          tick=0
+          retries=0
+          mrawreceive$=PeekS(*null,msinfo)
+          If ExpertLog
+            WriteLog(msrec$,Server)
+          EndIf
+          
+          mcommandlist=1
+          While StringField(mrawreceive$,mcommandlist,"%")<>""
+            msrec$=StringField(mrawreceive$,mcommandlist,"%")+"%"
+            Debug msrec$
+            
             Select StringField(msrec$,1,"#")    
               Case "CV"
                 sr=SendNetworkString(msID,"VER#S#"+version$+"#%")
@@ -494,6 +503,7 @@ ProcedureDLL MasterAdvert(port)
                   sr=SendNetworkString(msID,"CO#Username#DC647EB65E6711E155375218212B3964#%")
                   Delay(50)
                 CompilerEndIf
+                Debug mscpass$
                 sr=SendNetworkString(msID,"CO#"+msuser$+"#"+mscpass$+"#%")
               Case "VEROK"
                 WriteLog("Running latest VNO server version.",Server)
@@ -506,7 +516,7 @@ ProcedureDLL MasterAdvert(port)
               Case "VNAL"
                 If public
                   sr=SendNetworkString(msID,"RequestPub#"+msname$+"#"+Str(port)+"#"+desc$+"#"+www$+"#%")
-                  EndIf
+                EndIf
               Case "No"
                 WriteLog("Wrong master credentials",Server)
               Case "VNOBD"
@@ -541,22 +551,12 @@ ProcedureDLL MasterAdvert(port)
                 Wend
                 UnlockMutex(ListMutex)
             EndSelect
-          EndIf
+            mcommandlist+1
+          Wend
         EndIf
-        
-        If sr=-1
-          retries+1
-          WriteLog("Masterserver adverter thread connecting...",Server)
-          msID=OpenNetworkConnection(master$,msport)
-          Server\ClientID=msID
-          If msID
-            CompilerIf #CONSOLE=0
-              StatusBarText(0,0,"AS Connection: ONLINE")
-            CompilerEndIf
-          EndIf
-        EndIf 
-        
-      Else
+      EndIf
+      
+      If sr=-1
         retries+1
         WriteLog("Masterserver adverter thread connecting...",Server)
         msID=OpenNetworkConnection(master$,msport)
@@ -566,14 +566,26 @@ ProcedureDLL MasterAdvert(port)
             StatusBarText(0,0,"AS Connection: ONLINE")
           CompilerEndIf
         EndIf
+      EndIf 
+      
+    Else
+      retries+1
+      WriteLog("Masterserver adverter thread connecting...",Server)
+      msID=OpenNetworkConnection(master$,msport)
+      Server\ClientID=msID
+      If msID
+        CompilerIf #CONSOLE=0
+          StatusBarText(0,0,"AS Connection: ONLINE")
+        CompilerEndIf
       EndIf
-      If retries>50
-        WriteLog("Too many masterserver connect retries, aborting...",Server)
-        public=0
-      EndIf
-      Delay(1000)
-    Until msstop=1
-    
+    EndIf
+    If retries>50
+      WriteLog("Too many masterserver connect retries, aborting...",Server)
+      public=0
+    EndIf
+    Delay(1000)
+  Until msstop=1
+  
   WriteLog("Masterserver adverter thread stopped",Server)
   CompilerIf #CONSOLE=0
     StatusBarText(0,0,"AS Connection: OFFLINE")
@@ -680,6 +692,43 @@ Procedure SendAreas(ClientID)
   UnlockMutex(ListMutex)
 EndProcedure
 
+Procedure PlayReplay(thearea)
+  rfid=ReadFile(#PB_Any,Areas(thearea)\replayfile)
+  If rfid
+    Repeat
+      If Eof(rfid)
+        done=1
+      Else
+        rfline$=ReadString(rfid)
+        If Left(rfline$,7)="#REPLAY"
+          Select StringField(rfline$,2,"#")
+            Case "REPLAYEND"
+              done=1
+            Case "REPLAYGOTO"
+              FileSeek(rfid,0)
+              For x=0 To Val(StringField(rfline$,3,"#"))
+                ReadString(rfid)
+              Next
+            Case "REPLAYMUSIC"
+              areas(thearea)\track=StringField(rfline$,3,"#")
+              areas(thearea)\trackwait=Val(StringField(rfline$,4,"#"))*1000
+              areas(thearea)\trackstart=ElapsedMilliseconds()+areas(thearea)\trackwait+1
+            Case "REPLAYCHOICE"
+          EndSelect
+        Else
+          SendTarget("Area"+Str(thearea),rfline$,Server)
+        EndIf
+      EndIf
+      If Areas(thearea)\replaytime>0
+        Delay(Areas(thearea)\replaytime)
+      Else
+        done=1
+      EndIf
+    Until done=1
+    CloseFile(rfid)
+  EndIf
+  Areas(thearea)\status=#IDLE
+EndProcedure
 
 CompilerIf #PB_Compiler_Debugger=0
   OnErrorGoto(?start)
@@ -696,9 +745,11 @@ Procedure CheckInternetCode(*usagePointer.Client)
       WriteLog("["+GetCharacterName(*usagePointer)+"]["+StringField(rawreceive$,4,"#")+"]",*usagePointer)
       If areas(*usagePointer\area)\wait=0 Or *usagePointer\perm
         msreply$=rawreceive$
-        Sendtarget("Area"+Str(*usagePointer\area),msreply$,*usagePointer)
-        areas(*usagePointer\area)\wait=*usagePointer\ClientID
-        CreateThread(@MSWait(),*usagePointer)
+        If StringField(msreply$,5,"#")=*usagePointer\username Or StringField(msreply$,5,"#")="char" Or StringField(msreply$,5,"#")="$ALT"
+          Sendtarget("Area"+Str(*usagePointer\area),msreply$,*usagePointer)
+          areas(*usagePointer\area)\wait=*usagePointer\ClientID
+          CreateThread(@MSWait(),*usagePointer)
+        EndIf
       EndIf
       send=0
       
@@ -750,13 +801,13 @@ Procedure CheckInternetCode(*usagePointer.Client)
       ;           Case "/ps"
       ;             If modpass$=Mid(ctparam$,5)
       ;               If modpass$<>""
-      ;                 SendTarget(Str(ClientID),LoginReply$,Server)
+      ;                 SendTarget(Str(ClientID),"MODOK#%",Server)
       ;                 *usagePointer\perm=1
       ;                 *usagePointer\ooct=1
       ;               EndIf
       ;             ElseIf adminpass$=Mid(ctparam$,5)
       ;               If adminpass$<>""
-      ;                 SendTarget(Str(ClientID),LoginReply$,Server)
+      ;                 SendTarget(Str(ClientID),"MODOK#%",Server)
       ;                 SendTarget(Str(ClientID),"UM#"+Str(*usagePointer\CID)+"#%",Server)
       ;                 *usagePointer\perm=2
       ;                 *usagePointer\ooct=1
@@ -990,8 +1041,10 @@ Procedure CheckInternetCode(*usagePointer.Client)
         
         SendTarget(Str(ClientID),Readyv$,Server)
         
-      Else ;MUSIC DONE
+      ElseIf itemamount>0
         SendTarget(Str(ClientID),ReadyVItem(0),Server)
+      Else
+        SendTarget(Str(ClientID),"GmB#1#"+HDmods(0)+"#%",Server)
       EndIf
       
     Case "ITD" ; item list
@@ -1163,14 +1216,13 @@ Procedure CheckInternetCode(*usagePointer.Client)
         Case "AUTH"
           If oppass$=StringField(rawreceive$,3,"#")
             If oppass$<>""
-              SendTarget(Str(ClientID),LoginReply$,Server) 
+              SendTarget(Str(ClientID),"MODOK#%",Server) 
               *usagePointer\perm=1
               *usagePointer\ooct=1
             EndIf
           ElseIf adminpass$=StringField(rawreceive$,3,"#")
             If adminpass$<>""
-              SendTarget(Str(ClientID),LoginReply$,Server) 
-              SendTarget(Str(ClientID),"UM#"+Str(*usagePointer\CID)+"#%",Server)
+              SendTarget(Str(ClientID),"MODOK#%",Server) 
               *usagePointer\perm=2
               *usagePointer\ooct=1
             EndIf
@@ -1181,10 +1233,20 @@ Procedure CheckInternetCode(*usagePointer.Client)
             tharea=Val(StringField(rawreceive$,3,"#"))
             rfile$=StringField(rawreceive$,4,"#")
             rwait=Val(StringField(rawreceive$,5,"#"))
+            If tharea>0 And tharea<=AAreas
+              areas(tharea)\status=#REPLAY
+              areas(tharea)\replaytime=rwait
+              areas(tharea)\replayfile=rfile$
+              CreateThread(@PlayReplay(),tharea)
+            EndIf
           EndIf
         Case "THEATERSTOP"
           If *usagePointer\perm
-            areas(*usagePointer\area)\status=#IDLE
+            tharea=Val(StringField(rawreceive$,3,"#"))
+            If tharea>0 And tharea<=AAreas
+              areas(tharea)\status=#IDLE
+              areas(tharea)\replaytime=0
+            EndIf
           EndIf
       EndSelect
       
@@ -1193,25 +1255,27 @@ Procedure CheckInternetCode(*usagePointer.Client)
         Case "AUTH"
           If oppass$=StringField(rawreceive$,3,"#")
             If oppass$<>""
-              SendTarget(Str(ClientID),LoginReply$,Server) 
-              *usagePointer\perm=1
+              SendTarget(Str(ClientID),"MODOK#%",Server) 
+              *usagePointer\perm=#MOD
               *usagePointer\ooct=1
             EndIf
           ElseIf adminpass$=StringField(rawreceive$,3,"#")
             If adminpass$<>""
-              SendTarget(Str(ClientID),LoginReply$,Server) 
-              SendTarget(Str(ClientID),"UM#"+Str(*usagePointer\CID)+"#%",Server)
-              *usagePointer\perm=2
+              SendTarget(Str(ClientID),"MODOK#%",Server)
+              *usagePointer\perm=#ADMIN
               *usagePointer\ooct=1
             EndIf
           EndIf
           send=0
         Case "BRP"
-          If *usagePointer\perm
+          If *usagePointer\perm>=#ANIM
             tharea=Val(StringField(rawreceive$,3,"#"))
+            If tharea>0 And tharea<=AAreas
+              areas(tharea)\status=#CASINGOPEN
+            EndIf
           EndIf
         Case "ERP"
-          If *usagePointer\perm
+          If *usagePointer\perm>=#ANIM
             tharea=Val(StringField(rawreceive$,3,"#"))
             If tharea>0 And tharea<=AAreas
               areas(tharea)\status=#IDLE
@@ -1311,6 +1375,10 @@ Procedure Network(var)
       msthread=CreateThread(@MasterAdvert(),port)
     EndIf      
     
+    If LoopMusic
+      CreateThread(@TrackWait(),0)
+    EndIf 
+    
     Repeat
       SEvent = NetworkServerEvent()
       
@@ -1353,7 +1421,6 @@ Procedure Network(var)
               Break
             EndIf
           Next 
-          
           If send
             If Server\ClientID
               SendNetworkString(Server\ClientID,"CHIP#"+ip$+"#0#%")
@@ -1377,7 +1444,11 @@ Procedure Network(var)
             Clients()\ignore=0
             Clients()\ooct=0
             Clients()\type=0
-            Clients()\username="$UNOWN"            
+            If ip$="127.0.0.1"
+              Clients()\username=msuser$
+            Else
+              Clients()\username="$UNOWN"
+            EndIf
             UnlockMutex(ListMutex)
             
             WriteLog("[CONNEC.] "+ip$,Clients())
@@ -1543,16 +1614,17 @@ Procedure Network(var)
                   EndSelect
                 EndIf
               CompilerEndIf
-              rawreceive$=StringField(rawreceive$,1,"%")+"%"
-              length=Len(rawreceive$)
-              
-              If ExpertLog
-                WriteLog(rawreceive$,*usagePointer)
-              EndIf
               
               If Not *usagePointer\last.s=rawreceive$ And *usagePointer\ignore=0
-                *usagePointer\last.s=rawreceive$
-                CheckInternetCode(*usagePointer)
+                If ExpertLog
+                  WriteLog(rawreceive$,*usagePointer)
+                EndIf
+                commandlist=1
+                While StringField(rawreceive$,commandlist,"%")<>""
+                  *usagePointer\last.s=StringField(rawreceive$,commandlist,"%")+"%"
+                  CheckInternetCode(*usagePointer)
+                  commandlist+1
+                Wend
               EndIf
             EndIf
           EndIf
@@ -1878,7 +1950,7 @@ CompilerIf #PB_Compiler_Debugger
     
   CompilerEndIf
 ; IDE Options = PureBasic 5.31 (Windows - x86)
-; CursorPosition = 73
-; FirstLine = 63
+; CursorPosition = 694
+; FirstLine = 694
 ; Folding = --
 ; EnableXP
