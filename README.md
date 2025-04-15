@@ -1,15 +1,11 @@
 # serverV
-A homebrew server for Visual Novel Online
+A homebrew server for very old versions of Visual Novel Online.
 
-I created it by reverse engineering the server and client binaries, that means this server is "cleanroom-designed" and perfectly legal in the EU.
+Using this server on the official Master/Account Server was against the rules at one point.
 
-Using this server on the official Master/Account Server will most likely get you banned though, so don't use your main account for this.
+# VNO: How to host
 
-Support Requests à la "i got banned" and "help fiercy is mad" will be ignored.
-
-#VNO: How to host
-
-1. Read the [Server Guidelines and Rules](https://docs.google.com/document/d/1iW6dY6ak_mHxjrJuD1MwS12C3fmfi4vGxzTNOcJqrBw/edit) (protip: you are breaking them)
+1. Read the [Server Guidelines and Rules](https://docs.google.com/document/d/1iW6dY6ak_mHxjrJuD1MwS12C3fmfi4vGxzTNOcJqrBw/edit)
 
 2. Open your desired port from your router. [Guide](http://portforward.com/english/routers/port_forwarding/)
 
@@ -20,9 +16,9 @@ Support Requests à la "i got banned" and "help fiercy is mad" will be ignored.
   * You must first create an account via the client.
 
 5. ~~Enter your port in the box next to host.~~ (removed in version 1.004)
-It’s preseted from the port in settings.ini
+Itâ€™s preset from the port in settings.ini
 
-#AS notes
+# AS notes
 Starting from version 1.004 the Account Server IP is hardcoded in the vanilla servers and clients.
 serverV will read it from AS.ini like the old versions did.
 You can change the vanilla server and clients AS IP using [Ressource Hacker](http://www.angusj.com/resourcehacker/), it is at the end of the TForm3 RCDATA section.
